@@ -1,0 +1,756 @@
+\input texinfo   @c -*-texinfo-*-
+@c vim: filetype=texinfo tabstop=4
+@c %**start of header (This is for running Texinfo on a region.)
+@setfilename texindex.info
+@settitle Texindex: A Program For Sorting Indices
+@c %**end of header (This is for running Texinfo on a region.)
+
+@xrefautomaticsectiontitle on
+
+@c The following information should be updated here only!
+@c This sets the edition of the document.
+
+@c These apply across the board.
+@set UPDATE-MONTH February, 2014
+@set EDITION 0.1
+
+@set TITLE Texindex: A Program For Sorting Indices
+@set SHORTTITLE Texindex
+
+@iftex
+@set DOCUMENT book
+@set CHAPTER chapter
+@set APPENDIX appendix
+@set SECTION section
+@set SUBSECTION subsection
+@end iftex
+@ifhtml
+@set DOCUMENT Web page
+@set CHAPTER chapter
+@set APPENDIX appendix
+@set SECTION section
+@set SUBSECTION subsection
+@end ifhtml
+@ifinfo
+@set DOCUMENT Info file
+@set CHAPTER major node
+@set APPENDIX major node
+@set SECTION minor node
+@set SUBSECTION node
+@end ifinfo
+@ifdocbook
+@set DOCUMENT book
+@set CHAPTER chapter
+@set APPENDIX appendix
+@set SECTION section
+@set SUBSECTION subsection
+@end ifdocbook
+
+@c some special symbols
+@ifnottex
+@macro ii{text}
+@i{\text\}
+@end macro
+@end ifnottex
+
+@c merge the function and variable indexes into the concept index
+@c do so without the code font, and in the index entries do the
+@c font management ourselves.  Also merge in the chunk definition
+@c and reference entries, which jrweave creates for us.
+@ifnothtml
+@synindex fn cp
+@synindex vr cp
+@synindex cd cp
+@synindex cr cp
+@end ifnothtml
+
+@c If "finalout" is commented out, the printed output will show
+@c black boxes that mark lines that are too long.  Thus, it is
+@c unwise to comment it out when running a master in case there are
+@c overfulls which are deemed okay.
+
+@iftex
+@c @finalout
+@end iftex
+
+@copying
+@docbook
+<para>Published by:</para>
+
+<literallayout class="normal">Free Software Foundation
+51 Franklin Street, Fifth Floor
+Boston, MA  02110-1301 USA
+Phone: +1-617-542-5942
+Fax: +1-617-542-2652
+Email: <email>gnu@@gnu.org</email>
+URL: <ulink url="http://www.gnu.org/">http://www.gnu.org/</ulink></literallayout>
+
+<literallayout class="normal">Copyright &copy; 2014
+Free Software Foundation
+All Rights Reserved.</literallayout>
+@end docbook
+
+@ifnotdocbook
+Copyright @copyright{} 2014 @*
+Free Software Foundation @*
+All Rights Reserved.
+@end ifnotdocbook
+@sp 1
+The @command{texindex} program is copyright
+@copyright{} 2014 by the Free Software Foundation. It is published under
+the conditions of the GNU General Public License, version 3.
+@sp 2
+This is Edition @value{EDITION} of @cite{@value{TITLE}}.
+@end copying
+
+@c Uncomment this for the release.  Leaving it off saves paper
+@c during editing and review.
+@c @setchapternewpage odd
+
+@c Uncomment this if it's ever printed as a real book(let).
+@c @shorttitlepage @value{SHORTTITLE}
+
+@titlepage
+@title @value{TITLE}
+@subtitle @value{UPDATE-MONTH}
+@author Arnold D.@: Robbins
+
+@ifnotdocbook
+@c Include the Distribution inside the titlepage environment so
+@c that headings are turned off.  Headings on and off do not work.
+
+@page
+@vskip 0pt plus 1filll
+Published by:
+@sp 1
+Free Software Foundation @*
+51 Franklin Street, Fifth Floor @*
+Boston, MA  02110-1301 USA @*
+Phone: +1-617-542-5942 @*
+Fax: +1-617-542-2652 @*
+Email: @email{gnu@@gnu.org} @*
+URL: @uref{http://www.gnu.org/} @*
+
+@insertcopying
+@end ifnotdocbook
+@end titlepage
+
+@set DRAFT @i{DRAFT}
+
+@iftex
+@headings off
+@evenheading @thispage @| @value{DRAFT} @| @strong{@value{SHORTTITLE}}
+@oddheading  @strong{@thischapter} @| @value{DRAFT} @| @thispage
+@end iftex
+
+@ifnottex
+@ifnotdocbook
+@ifnotxml
+@node Top
+@top General Introduction
+@c Preface node should come right after the Top
+@c node, in `unnumbered' sections, then the introductory chapter.
+@c Licensing nodes are appendices, they're not central to TexiWebJr.
+
+This file documents @command{texindex}, a program that processes the raw
+index files produced by the @file{texinfo.tex} macro package for @TeX{}.
+
+@insertcopying
+@end ifnotxml
+@end ifnotdocbook
+@end ifnottex
+
+@menu
+@detailmenu
+@end detailmenu
+@end menu
+
+@c @summarycontents
+@contents
+
+@c Add these to the menu if they ever get included.
+@c @node Foreword
+@c @unnumbered Foreword
+
+@node Preface
+@unnumbered Preface
+
+This @value{DOCUMENT} describes @file{texindex.awk}, a reimplementation of
+the C program @file{texindex.c}.  The purpose is to make the program more
+maintainable, and in particular, to support the ability to have @samp{@{}
+and @samp{@}} as characters that can be listed correctly in the index.
+
+@menu
+* Audience::                    Who should read this @value{DOCUMENT}.
+* Overview::                    An overview of the @value{DOCUMENT}.
+* Conventions::                 Typographical conventions.
+* Acknowledgements::            Acknowledgements.
+@end menu
+
+@node Audience
+@unnumberedsec Intended Audience
+
+You should read this @value{DOCUMENT} if you want to understand
+how @file{texindex.awk} works. You should be familiar with
+the @command{awk} programming language.
+
+@node Overview
+@unnumberedsec What Is Covered
+
+Text and chapter by chapter description here.
+
+@node Conventions
+@unnumberedsec Typographical Conventions
+
+@c Copied mostly verbatim from the gawk manual.
+
+@cindex Texinfo document formatting language
+This @value{DOCUMENT} is written in an enhanced version of
+@uref{http://www.gnu.org/software/texinfo/, Texinfo},
+the GNU documentation formatting language.
+A single Texinfo source file is used to produce both the printed and online
+versions of a program's documentation.
+@ifnotinfo
+Because of this, the typographical conventions
+are slightly different than in other books you may have read.
+@end ifnotinfo
+
+Examples you would type at the command-line are preceded by the common
+shell primary and secondary prompts, @samp{$} and @samp{>}.  Input that
+you type is shown @kbd{like this}.  Output from the command is preceded
+by the glyph ``@print{}''.  This typically represents the command's
+standard output.  Error messages, and other output on the command's
+standard error, are preceded by the glyph ``@error{}''.  For example:
+
+@example
+$ @kbd{echo hi on stdout}
+@print{} hi on stdout
+$ @kbd{echo hello on stderr 1>&2}
+@error{} hello on stderr
+@end example
+
+@ifnotinfo
+In the text, command names appear in @code{this font}, while code segments
+appear in the same font and quoted, @samp{like this}.  Options look
+like this: @option{-f}.  Some things are emphasized @emph{like this},
+and if a point needs to be made strongly, it is done @strong{like this}.
+The first occurrence of a new term is usually its @dfn{definition} and
+appears in the same font as the previous occurrence of ``definition''
+in this sentence.  Finally, file names are indicated like this:
+@file{/path/to/our/file}.
+@end ifnotinfo
+
+@node Acknowledgements
+@unnumberedsec Acknowledgements
+
+Thanks to Karl Berry for guidance in understanding the requirements
+for what needs to be done.
+
+@node Requirements
+@chapter Requirements
+
+The input to this program is the list of unsorted index entries
+produced by @file{texinfo.tex} when a Texinfo document is processed.
+For example, two lines from the @command{gawk} documentation might
+look like this:
+
+@example
+\entry@{POSIX awk@}@{5@}@{POSIX \command @{awk@}@}
+@dots{}
+\entry@{POSIX awk@}@{106@}@{POSIX \command @{awk@}@}
+@end example
+
+There are three ``fields'' enclosed in braces:
+
+@itemize @bullet
+@item
+The sort key. This is the text of the entry with all markup removed.
+It should contain only ASCII characters.
+
+@item
+The page number for this entry.
+
+@item
+The actual text to go into the printed index, which can include markup.
+@end itemize
+
+The braces are balanced in all cases, although for use by this program,
+braces can be included in the sort key by escaping them with the
+@dfn{command character}. This is the first character on the line. It is
+either a backslash, or a Texinfo at-sign, @samp{@@}.
+
+The job is sort the entries, and merge those which are identical,
+except for the page numbers.  For the above two entries, the output
+should be:
+
+@example
+\entry @{POSIX \command @{awk@}@}@{5, 106@}
+@end example
+
+The sorting should be in the order of: all symbols first, then all digits, then
+all letters, with uppercase letters following lowercase ones, so we will need
+some smarts.
+
+Input lines can be duplicated (same entry, same page, more than once), so
+we will have to deal with that.
+
+In addition, @command{texindex} must output special lines indicating the
+first character (the @dfn{initial}) of keys grouped together, but only
+if there is more than one initial used throughout the input file.
+This output looks like:
+
+@example
+\initial@{A@}
+@end example
+
+In the rest of the program we make two fundamental assumptions:
+
+@enumerate 1
+@item
+The mapping of sort key to display text is unique.  The second time we
+encounter a given sort key, we assume that the display text is the same
+and only pay attention to the page number.
+
+@item
+For the same sort key and text, page numbers will be monotonically increasing.
+This means we can just use a new page number when it comes in, and not have to
+sort entries based on both sort key and page number.
+@end enumerate
+
+@node Organization
+@chapter High Level Organization
+
+This program replaces @file{texindex.c}.
+As an @command{awk} program it needs to be self-contained.
+The general outline is as follows:
+
+@(texindex.awk@) =
+@<shebang header@>
+@<GPL 3 Copyright statement@>
+@<library functions@>
+@<helper functions@>
+
+BEGIN {
+	@<Initial stuff@>
+	@<Argument processing@>
+}
+
+@<@code{beginfile()} function@>
+@<@code{endfile()}@ function>
+
+@<process a record@>
+
+END {
+	@<Final stuff@>
+}
+@<work functions@>
+@
+
+The @samp{#!} header lets us create executable scripts.
+For development, I've used the location of @command{gawk}
+on my system. For production, the value will be substituted
+in using Autoconf.
+
+@<shebang header@> =
+#! /usr/local/bin/gawk -f
+@
+
+The initial setup sets up some constants, including
+the default opening and closing delimiters in the data line.
+We will show an example of a data line soon.
+The last line sets up @code{Can_split_null} which tells
+us if the built-in @code{split()} function will split
+apart a string into its individual characters or if we
+have to do to it manually.
+
+@<Initial stuff@>=
+TRUE = 1
+FALSE = 0
+EXIT_SUCCESS = 0
+EXIT_FAILURE = 1
+Open = "{"
+Close = "}"
+Texindex_Version = "5.0"
+
+Can_split_null = check_split_null()
+@
+
+Argument processing is very straightforward, as well as somewhat manual.
+The important thing is to remove options and their arguments from
+@code{ARGV} so that they're not treated as filenames. The options that
+print version or help information automatically exit, so there's no need
+to mess with @code{ARGV} in those cases.
+
+@<Argument processing@>=
+for (i = 1; i < ARGC; i++) {
+	if (ARGV[i] == "-h" || ARGV[i] == "--help")
+		usage(EXIT_SUCCESS)
+	else if (ARGV[i] == "-o" || ARGV[i] == "--output") {
+		delete ARGV[i]	# the option
+		Output_file = ARGV[++i]
+		Global_output_file = TRUE
+
+		if (length(Output_file) == 0)	# -o was last arg
+			usage(EXIT_FAILURE)
+
+		delete ARGV[i]	# the output file
+	} else if (ARGV[i] == "--version")
+		version()
+	else if (ARGV[i] == "-k" || ARGV[i] == "--keep") {
+		# do nothing, backwards compatibility
+		delete ARGV[i]
+	} else if (ARGV[i] ~ /^--?.*/)
+		usage(EXIT_FAILURE)
+	else
+		break
+}
+@
+
+For the moment, we keep a placeholder in case there
+is any final cleanup to perform.
+
+@<Final stuff@>=
+# empty for now
+@
+
+@node Processing Records
+@chapter Processing Records
+
+@<@code{beginfile()} function@>=
+function beginfile(filename)
+{
+	if (! Global_output_file)
+		Output_file = filename "s"
+	del_array(Data)
+
+	Command_char = substr($0, 1, 1)
+	if ((Command_char != "\\" && Command_char != "@") || substr($0, 2, 5) != "entry")
+		fatal("%s is not a Texinfo index file", filename)
+	Special_chars = Open Close Command_char
+}
+@
+
+@<@code{endfile()} function@>=
+function endfile(filename)
+{
+	for (i = 1; i <= Entries; i++) {
+		# deal with initial
+		# write the actual line \entry{....}
+	}
+	close(Output_file)
+}
+@
+
+@<process a record@>=
+{
+	# Remove duplicates, which can happen
+	if ($0 in Seen)
+		next
+	Seen[$0]++
+
+	# Use substr to avoid hassles with leading backslash in sub()
+	$0 = substr($0, 7)		# remove leading \entry
+	numfields = field_split($0, fields, Open, Close, Command_char)
+	if (numfields != 3)
+		fatal("%s:%d: Bad entry", FILENAME, FNR)
+
+	key = fields[1]
+	line = fields[2]
+	text = fields[3]
+
+	initial = substr(key, 1, 1)
+	nextchar = substr(key, 2, 1)
+	if (initial == Command_char && (nextchar == Open || nextchar == Close))
+		initial = nextchar
+
+	if (! ((key, "line") in Data) {
+		# first time we've seen this
+		Keys[++Entries] = key
+		Data[key, "line"] = line
+		Data[key, "text"] = text
+		Data[key, "initial"] = initial
+	} else
+		Data[key, "line"] = Data[key, "line"] ", " line
+
+	if (! Do_initials) {
+		if (Prev_initial == "")
+			Prev_initial = initial
+		else if (initial != Prev_initial)
+			Do_initials = TRUE
+	}
+}
+@
+
+@<work functions@>=
+function field_split(record, fields, start, end, com_ch,		# parameters
+					chars, numchars, out, delim_count, i, j, k) # locals
+{
+	del_array(fields)
+
+	numchars = char_split(record, chars)
+	j = 1	# index into fields
+	k = 1	# index into out
+	delim_count = 1
+	for (i = 2; i <= numchars; i++) {
+		if (chars[i] == com_ch) {
+			if (index(Special_chars, chars[i+1]) != 0) {
+				out[k++] = chars[i+1]
+				i++
+			} else {
+				out[k++] = chars[i]
+			}
+		} else if (chars[i] == start) {
+			delim_count++
+			out[k++] = chars[i]
+		} else if (chars[i] == end) {
+			delim_count--
+			if (delim_count == 0) {
+				fields[j++] = join(out, 1, k-1, SUBSEP)
+				del_array(out)	# reset for next time through
+
+				i++
+				if (i <= numchars && chars[i] != start)
+					fatal("%s:%d: Bad entry", FILENAME, FNR)
+				delim_count = 1
+			} else {
+				out[k++] = chars[i]
+			}
+		} else {
+			out[k++] = chars[i]
+		}
+
+		if (j == 3) {	# Per Karl, just grab the whole rest of the line
+			# extract everything between the outer delimiters
+			fields[3] = substr(record, i + 1, numchars - i - 1)
+			break
+		}
+	}
+
+	return j	# num fields
+}
+@
+
+@node Necessary Stuff
+@chapter Necessary Stuff That Isn't Thrilling
+
+This @value{CHAPTER} provides a number of parts
+that are necessary but not exciting.
+
+@menu
+@end menu
+
+@node Copyright Statement
+@section Copyright Statement
+
+Every program needs a copyright statement.
+
+@<GPL 3 Copyright statement@>=
+#
+# Copyright (C) 2014 Free Software Foundation
+# 
+# This file is part of GNU Texinfo.
+# 
+# Texinfo is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+# 
+# Texinfo is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+@
+
+@node Library Functions
+@section Library Functions
+
+The program uses several library routines discussed in detail
+in the @command{gawk} documentation.  The first sets up the
+infrastructure for the @code{beginfile()} and @code{endfile()} functions.
+@FIXME{Add URL here.}
+
+@<library functions@>=
+# ftrans.awk --- handle data file transitions
+#
+# user supplies beginfile() and endfile() functions
+#
+# Arnold Robbins, arnold@skeeve.com, Public Domain
+# November 1992
+
+FNR == 1 {
+	if (_filename_ != "")
+		endfile(_filename_)
+	_filename_ = FILENAME
+	beginfile(FILENAME)
+}
+
+END  { endfile(_filename_) }
+@
+
+The next function is @code{join()}, which joins
+an array of characters back into a string.
+@FIXME{Add URL here.}
+
+@<library functions@>=
+# join.awk --- join an array into a string
+#
+# Arnold Robbins, arnold@skeeve.com, Public Domain
+# May 1993
+
+function join(array, start, end, sep,    result, i)
+{
+	if (sep == "")
+		sep = " "
+	else if (sep == SUBSEP) # magic value
+		sep = ""
+	result = array[start]
+	for (i = start + 1; i <= end; i++)
+		result = result sep array[i]
+	return result
+}
+@
+
+@node Helper Functions
+@section Helper Functions
+
+A number of helper functions make the main code easier
+to follow.
+@code{del_array()} clears out an array.
+
+@<helper functions@>=
+function del_array(a)
+{
+	# Portable and faster than
+	# 	for (i in a)
+	# 		delete a[i]
+	split("", a)
+}
+@
+
+This function checks if the @command{awk} running this program
+supports using the null string for the separater, splitting each
+character off into a separate element. If so, the return value will
+be the number of elements in the array, and it will be more than one.
+It is called at program startup.
+
+@<helper functions@>=
+function check_split_null(		n, a)
+{
+	n = split("abcde", a, "")
+	return (n == 5)
+}
+@
+
+This function splits a string into separate characters, letting
+@command{awk} do the work if possible. If not, each character
+is extracted manually using a loop and @code{substr()}.
+
+@<helper functions@>=
+function char_split(string, array,		n, i)
+{
+	if (Can_split_null)
+		return split(string, array, "")
+
+	# do it the hard way
+	del_array(array)
+	n = length(string)
+	for (i = 1; i <= n; i++)
+		array[i] = substr(string, i, 1)
+
+	return n
+}
+@
+
+The @code{usage()} and @code{version()} functions print the
+necessary information and then exit.
+
+@<helper functions@>=
+function usage(exit_val)
+{
+	print "Usage: texindex [OPTION]... FILE..."
+	print "Generate a sorted index for each TeX output FILE."
+	print "Usually FILE... is specified as `foo.??' for a document `foo.texi'."
+	print ""
+	print "Options:"
+	print " -h, --help 	display this help and exit"
+	print " -o, --output FILE	send output to FILE"
+	print " --version 	display version information and exit"
+	print ""
+	print "Email bug reports to bug-texinfo@gnu.org,"
+	print "general questions and discussion to help-texinfo@gnu.org."
+	print "Texinfo home page: http://www.gnu.org/software/texinfo/"
+
+	exit exit_val
+}
+
+function version()
+{
+	print "texindex (GNU texinfo) " Texindex_Version
+	print ""
+	print "Copyright (C) 2014 Free Software Foundation, Inc."
+	print "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>"
+	print "This is free software: you are free to change and redistribute it."
+	print "There is NO WARRANTY, to the extent permitted by law."
+
+	exit EXIT_SUCCESS
+}
+@
+
+The @code{fatal()} function prints a fatal error message
+and then exits.
+
+@<helper functions@>=
+function fatal(format, arg1, arg2, arg3, arg4, arg5,
+						arg6, arg7, arg8, arg9, arg10)
+{
+	printf(format, arg1, arg2, arg3, arg4, arg5,
+			arg6, arg7, arg8, arg9, arg10) > "/dev/stderr"
+	exit EXIT_FAILURE
+}
+@
+
+@node Code Chunk Summaries
+@appendix Code Chunk Summaries
+
+This @value{APPENDIX} presents alphabetical lists of
+all the file definitions, the code chunk definitions,
+and the code chunk references.
+
+@menu
+* File Definitions::          Source files by definition.
+* Code Chunk Definitions::    Code chunks by definition.
+* Code Chunk References::     Code chunks by reference.
+@end menu
+
+@node File Definitions
+@appendixsec Source File Definitions
+
+@print_file_defs
+
+@node Code Chunk Definitions
+@appendixsec Code Chunk Definitions
+
+@print_code_defs
+
+@node Code Chunk References
+@appendixsec Code Chunk References
+
+@print_code_refs
+
+@ignore
+@node Bibliography
+@unnumbered Bibliography
+@end ignore
+
+@node Concept Index
+@unnumbered Index
+
+@printindex cp
+
+@bye
+
+TODO:
