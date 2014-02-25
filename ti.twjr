@@ -336,7 +336,7 @@ BEGIN {
 }
 
 @<@code{beginfile()} function@>
-@<@code{endfile()}@ function>
+@<@code{endfile()} function@>
 
 @<process a record@>
 
@@ -357,12 +357,20 @@ in using Autoconf.
 
 The initial setup sets up some constants, including
 the default opening and closing delimiters in the data line.
-We will show an example of a data line soon.
+We showed an example of a data line earlier.
 The last line sets up @code{Can_split_null} which tells
 us if the built-in @code{split()} function will split
 apart a string into its individual characters or if we
 have to do to it manually.
 
+@cindex @code{TRUE} constant
+@cindex @code{FALSE} constant
+@cindex @code{EXIT_SUCCESS} constant
+@cindex @code{EXIT_FAILURE} constant
+@cindex @code{Open} variable
+@cindex @code{Close} variable
+@cindex @code{Texindex_version} variable
+@cindex @code{Can_split_null} variable
 @<Initial stuff@>=
 TRUE = 1
 FALSE = 0
@@ -385,16 +393,7 @@ to mess with @code{ARGV} in those cases.
 for (i = 1; i < ARGC; i++) {
 	if (ARGV[i] == "-h" || ARGV[i] == "--help")
 		usage(EXIT_SUCCESS)
-	else if (ARGV[i] == "-o" || ARGV[i] == "--output") {
-		delete ARGV[i]	# the option
-		Output_file = ARGV[++i]
-		Global_output_file = TRUE
-
-		if (length(Output_file) == 0)	# -o was last arg
-			usage(EXIT_FAILURE)
-
-		delete ARGV[i]	# the output file
-	} else if (ARGV[i] == "--version")
+	else if (ARGV[i] == "--version")
 		version()
 	else if (ARGV[i] == "-k" || ARGV[i] == "--keep") {
 		# do nothing, backwards compatibility
@@ -416,70 +415,150 @@ is any final cleanup to perform.
 @node Processing Records
 @chapter Processing Records
 
+Procesing records includes setting things up for each
+input file, pulling apart each record, sorting the data
+at the end, and writing out the data properly.
+
+@menu
+@end menu
+
+@node Start of file
+@section Per File Initial Setup
+
+At the beginning of each input file, the @code{beginfile()}
+function sets up the output file name.  The first record
+has already been read, so it's possible to perform the
+checks for a Texinfo index file: The first character
+must be either @samp{\} or @samp{@@}, and the next five
+characters must be the word @samp{entry}.
+
+@cindex @code{Special_chars} variable
+@code{Special_chars} are the three characters that
+must be preceded by the command character inside the
+first key.
+
 @<@code{beginfile()} function@>=
 function beginfile(filename)
 {
-	if (! Global_output_file)
-		Output_file = filename "s"
+	Output_file = filename "s"
+
+	# re-init these for each input file
 	del_array(Data)
+	Do_initials = FALSE
+	Prev_initial = ""
 
 	Command_char = substr($0, 1, 1)
-	if ((Command_char != "\\" && Command_char != "@") || substr($0, 2, 5) != "entry")
+	if (   (Command_char != "\\" && Command_char != "@") \
+	    || substr($0, 2, 5) != "entry")
 		fatal("%s is not a Texinfo index file", filename)
+
 	Special_chars = Open Close Command_char
 }
 @
 
-@<@code{endfile()} function@>=
-function endfile(filename)
+@node Per Record Processing
+@section Processing Each Record
+
+Record processing consists of building the data structures
+for use in sorting and printing once the whole file has been
+processed.
+
+@<process a record@> =
 {
-	for (i = 1; i <= Entries; i++) {
-		# deal with initial
-		# write the actual line \entry{....}
-	}
-	close(Output_file)
+	@<Remove duplicates@>
+	@<Set up @code{fields} array with the data@>
+	@<Name the fields and get the initial@>
+	@<Store the data for the line in the @code{Data} array@>
+	@<Check for more than one initial@>
 }
 @
 
-@<process a record@>=
-{
-	# Remove duplicates, which can happen
-	if ($0 in Seen)
-		next
-	Seen[$0]++
+@cindex @code{Seen} array
+Duplicates are going to be exact. Removing them is thus easy;
+store each incoming line as the index of an array named @code{Seen}.
+If a line is not there, it has not been seen. Otherwise it
+has, and we move on to the next record.
 
-	# Use substr to avoid hassles with leading backslash in sub()
-	$0 = substr($0, 7)		# remove leading \entry
-	numfields = field_split($0, fields, Open, Close, Command_char)
-	if (numfields != 3)
-		fatal("%s:%d: Bad entry", FILENAME, FNR)
+@<Remove duplicates@>=
+# Remove duplicates, which can happen
+if ($0 in Seen)
+	next
+Seen[$0]++
+@
 
-	key = fields[1]
-	line = fields[2]
-	text = fields[3]
+The next part is to pull out the data of interest from the three sets of
+braces. This is delegated to a function named @code{field_split()}. Before
+doing so, we remove the leading command character, the word @samp{entry},
+and the first brace.  There must be exactly three fields.
 
-	initial = substr(key, 1, 1)
-	nextchar = substr(key, 2, 1)
-	if (initial == Command_char && (nextchar == Open || nextchar == Close))
-		initial = nextchar
+@<Set up @code{fields} array with the data@>=
+# Use substr to avoid hassles with leading backslash in sub()
+$0 = substr($0, 7)		# remove leading \entry
+numfields = field_split($0, fields, Open, Close, Command_char)
+if (numfields != 3)
+	fatal("%s:%d: Bad entry", FILENAME, FNR)
+@
 
-	if (! ((key, "line") in Data) {
-		# first time we've seen this
-		Keys[++Entries] = key
-		Data[key, "line"] = line
-		Data[key, "text"] = text
-		Data[key, "initial"] = initial
-	} else
-		Data[key, "line"] = Data[key, "line"] ", " line
+We give the fields names, and then get the initial for the sort key,
+which is the first character, unless it happens to be special, in which
+case it is the second.  We store just the character, since we need it
+for comparison purposes later.
 
-	if (! Do_initials) {
-		if (Prev_initial == "")
-			Prev_initial = initial
-		else if (initial != Prev_initial)
-			Do_initials = TRUE
-	}
+@<Name the fields and get the initial@>=
+key = fields[1]
+linenum = fields[2]
+text = fields[3]
+
+initial = substr(key, 1, 1)
+nextchar = substr(key, 2, 1)
+if (initial == Command_char && (nextchar == Open || nextchar == Close))
+	initial = nextchar
+@
+
+@cindex @code{Keys} array
+@cindex @code{Entries} variable
+@cindex @code{Data} array
+We use a traditional @command{awk} multidimensional array to store
+the various bits and pieces. The subscripts are based on the sort key,
+and the parts are the @code{"linenum"}, the output @code{"text"},
+and the @code{"initial"}. In addition, the key is stored as data
+in the @code{Entries} array.  This array is what is sorted later on.
+
+@<Store the data for the line in the @code{Data} array@>=
+if (! ((key, "text") in Data)) {
+	# first time we've seen this full line
+	Keys[++Entries] = key
+	Data[key, "linenum"] = linenum
+	Data[key, "text"] = text
+	Data[key, "initial"] = initial
+} else
+	Data[key, "linenum"] = Data[key, "linenum"] ", " linenum
+@
+
+Finally, we need to see if more than one initial occurs
+in the file. If so, we set @code{Do_initials} to true.
+As soon as it's true, we don't need to do further checking
+on subsequent lines.
+
+@<Check for more than one initial@> =
+if (! Do_initials) {
+	if (Prev_initial == "")
+		Prev_initial = initial
+	else if (initial != Prev_initial)
+		Do_initials = TRUE
 }
 @
+
+Let's take a look at the function that breaks apart
+the record. Upon input, the value of @code{record}
+looks something like:
+
+@example
+POSIX awk@}@{5@}@{POSIX \command @{awk@}@}
+@end example
+
+The first field may have instances of @samp{@@@{} and/or @samp{@@@}}, so
+the braces aren't necessarily exactly balanced.
 
 @<work functions@>=
 function field_split(record, fields, start, end, com_ch,		# parameters
@@ -527,6 +606,54 @@ function field_split(record, fields, start, end, com_ch,		# parameters
 	}
 
 	return j	# num fields
+}
+@
+
+@node End File Processing
+@section Sorting And Printing
+
+Upon end of input, the processing is straightforward.  Sort the entries,
+and then write them out. If we are printing the initial, handle that.
+(That task is delegated to a small function.)
+
+@<@code{endfile()} function@>=
+function endfile(filename,		i, prev_initial, initial)
+{
+	# sort Entries
+	for (i = 1; i <= Entries; i++) {
+		# deal with initial
+		initial = Data[Keys[i], "initial"]
+		if (initial != prev_initial) {
+			prev_initial = initial
+			print_initial(initial)
+		}
+
+		# write the actual line \entry{....}
+		printf("%centry %c%s%c%c%s%c\n",
+			Command_char,
+			Open,
+			Data[Keys[i], "text"],
+			Close,
+			Open,
+			Data[Keys[i], "linenum"],
+			Close) > Output_file
+	}
+	close(Output_file)
+}
+@
+
+Printing the initial is not complicated. The main thing
+is to preceed special characters with the command character.
+
+@<work functions@>=
+function print_initial(initial)
+{
+	if (Do_initials) {
+		if (index(Special_chars, initial) != 0)
+			initial = Command_char initial
+		printf("%cinitial%c%s%c\n",
+			Command_char, Open, initial, Close) > Output_file
+	}
 }
 @
 
@@ -677,7 +804,6 @@ function usage(exit_val)
 	print ""
 	print "Options:"
 	print " -h, --help 	display this help and exit"
-	print " -o, --output FILE	send output to FILE"
 	print " --version 	display version information and exit"
 	print ""
 	print "Email bug reports to bug-texinfo@gnu.org,"
