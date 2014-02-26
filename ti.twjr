@@ -752,7 +752,7 @@ BEGIN {
 }
 @
 
-Here is the @code{index_compare()} function.
+Here is the @code{less_than()} function.
 
 @<work functions@>=
 function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
@@ -766,20 +766,32 @@ function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
 
 	for (i = 1; i <= len; i++) {
 		if (isalpha(chars_l[i]) && isalpha(chars_r[i])) {
+			# same char different case
+			# Upper case comes out last
 			if (chars_l[i] != chars_r[i] &&
 				tolower(chars_l[i]) == tolower(chars_r[i])) {
+					if (i != len && (isalpha(chars_l[i+1]) || isalpha(chars_r[i+1])))
+						continue
 					if (chars_l[i] > chars_r[i])
 						return 1
 					return 0
 			}
-			if (chars_l[i] > chars_r[i])
+			# same case, different char
+			# letter order wins
+
+			# different case, different char
+			# letter order wins
+			if (Ordval[chars_l[i]] < Ordval[chars_r[i]])
 				return 1
-			if (chars_l[i] < chars_r[i])
+
+			if (Ordval[chars_l[i]] > Ordval[chars_r[i]])
 				return 0
 
+			# equal, keep going
 			continue
 		}
 
+		# letter and something else, or two non-letters
 		if (Ordval[chars_l[i]] < Ordval[chars_r[i]])
 			return 1
 		if (Ordval[chars_l[i]] > Ordval[chars_r[i]])
