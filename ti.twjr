@@ -161,7 +161,29 @@ index files produced by the @file{texinfo.tex} macro package for @TeX{}.
 @end ifnottex
 
 @menu
+* Preface::                     Introductory remarks.
+* Requirements::                How the program should work.
+* Organization::                Top level organization.
+* Processing Records::          Processing each record.
+* Necessary Stuff::             Stuff the program needs.
+* Code Chunk Summaries::        Cross references for the chunks.
+* Concept Index::               The index.
+
 @detailmenu
+* Audience::                    Who should read this @value{DOCUMENT}.
+* Overview::                    An overview of the @value{DOCUMENT}.
+* Conventions::                 Typographical conventions.
+* Acknowledgements::            Acknowledgements.
+* Start of file::               What to do at the start of each file.
+* Per Record Processing::       Processing the record.
+* End File Processing::         Sorting and printing.
+* Entry Comparison::            Comparing entries.
+* Copyright Statement::         Copyright info.
+* Library Functions::           Necessary library functions.
+* Helper Functions::            Helper functions.
+* File Definitions::            Source files by definition.
+* Code Chunk Definitions::      Code chunks by definition.
+* Code Chunk References::       Code chunks by reference.
 @end detailmenu
 @end menu
 
@@ -300,7 +322,7 @@ if there is more than one initial used throughout the input file.
 This output looks like:
 
 @example
-\initial@{A@}
+\initial @{A@}
 @end example
 
 In the rest of the program we make two fundamental assumptions:
@@ -320,8 +342,6 @@ sort entries based on both sort key and page number.
 @node Organization
 @chapter High Level Organization
 
-This program replaces @file{texindex.c}.
-As an @command{awk} program it needs to be self-contained.
 The general outline is as follows:
 
 @c Make it executable
@@ -343,13 +363,11 @@ BEGIN {
 
 @<process a record@>
 
-END {
-	@<Final stuff@>
-}
 @<work functions@>
 @
 
 The @samp{#!} header lets us create executable scripts.
+This lets the script be self-contained.
 For development, I've used the location of @command{gawk}
 on my system. For production, the value will be substituted
 in using Autoconf.
@@ -370,8 +388,6 @@ have to do to it manually.
 @cindex @code{FALSE} constant
 @cindex @code{EXIT_SUCCESS} constant
 @cindex @code{EXIT_FAILURE} constant
-@cindex @code{Open} variable
-@cindex @code{Close} variable
 @cindex @code{Texindex_version} variable
 @cindex @code{Can_split_null} variable
 @<Initial stuff@>=
@@ -379,8 +395,6 @@ TRUE = 1
 FALSE = 0
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
-Open = "{"
-Close = "}"
 Texindex_Version = "5.0"
 
 Can_split_null = check_split_null()
@@ -408,13 +422,6 @@ for (i = 1; i < ARGC; i++) {
 }
 @
 
-For the moment, we keep a placeholder in case there
-is any final cleanup to perform.
-
-@<Final stuff@>=
-# empty for now
-@
-
 @node Processing Records
 @chapter Processing Records
 
@@ -423,6 +430,10 @@ input file, pulling apart each record, sorting the data
 at the end, and writing out the data properly.
 
 @menu
+* Start of file::               What to do at the start of each file.
+* Per Record Processing::       Processing the record.
+* End File Processing::         Sorting and printing.
+* Entry Comparison::            Comparing entries.
 @end menu
 
 @node Start of file
@@ -440,6 +451,7 @@ characters must be the word @samp{entry}.
 must be preceded by the command character inside the
 first key.
 
+@cindex @file{begin_file()} function
 @<@code{beginfile()} function@>=
 function beginfile(filename)
 {
@@ -455,7 +467,7 @@ function beginfile(filename)
 	    || substr($0, 2, 5) != "entry")
 		fatal("%s is not a Texinfo index file", filename)
 
-	Special_chars = Open Close Command_char
+	Special_chars = "{}" Command_char
 }
 @
 
@@ -497,7 +509,7 @@ There must be exactly three fields.
 @<Set up @code{fields} array with the data@>=
 # Use substr to avoid hassles with leading backslash in sub()
 $0 = substr($0, 7)		# remove leading \entry
-numfields = field_split($0, fields, Open, Close, Command_char)
+numfields = field_split($0, fields, "{", "}", Command_char)
 if (numfields != 3)
 	fatal("%s:%d: Bad entry", FILENAME, FNR)
 @
@@ -514,7 +526,7 @@ text = fields[3]
 
 initial = toupper(substr(key, 1, 1))
 nextchar = substr(key, 2, 1)
-if (initial == Command_char && (nextchar == Open || nextchar == Close))
+if (initial == Command_char && (nextchar == "{" || nextchar == "}"))
 	initial = nextchar
 @
 
@@ -563,6 +575,7 @@ POSIX awk@}@{5@}@{POSIX \command @{awk@}@}
 The first field may have instances of @samp{@@@{} and/or @samp{@@@}}, so
 the braces aren't necessarily exactly balanced.
 
+@cindex @file{field_split()} function
 @<work functions@>=
 function field_split(record, fields, start, end, com_ch,		# parameters
 					chars, numchars, out, delim_count, i, j, k) # locals
@@ -619,6 +632,7 @@ Upon end of input, the processing is straightforward.  Sort the entries,
 and then write them out. If we are printing the initial, handle that.
 (That task is delegated to a small function.)
 
+@cindex @file{endfile()} function
 @<@code{endfile()} function@>=
 function endfile(filename,		i, prev_initial, initial)
 {
@@ -633,31 +647,28 @@ function endfile(filename,		i, prev_initial, initial)
 			print_initial(initial)
 		}
 
-		# write the actual line \entry{....}
-		printf("%centry %c%s%c%c%s%c\n",
+		# write the actual line \entry{...}{...}
+		printf("%centry {%s}{%s}\n",
 			Command_char,
-			Open,
 			Data[Keys[i], "text"],
-			Close,
-			Open,
-			Data[Keys[i], "linenum"],
-			Close) > Output_file
+			Data[Keys[i], "linenum"]) > Output_file
 	}
 	close(Output_file)
 }
 @
 
 Printing the initial is not complicated. The main thing
-is to preceed special characters with the command character.
+is to precede special characters with the command character.
 
+@cindex @file{print_initial()} function
 @<work functions@>=
 function print_initial(initial)
 {
 	if (Do_initials) {
 		if (index(Special_chars, initial) != 0)
 			initial = Command_char initial
-		printf("%cinitial %c%s%c\n",
-			Command_char, Open, initial, Close) > Output_file
+		printf("%cinitial {%s}\n",
+			Command_char, initial) > Output_file
 	}
 }
 @
@@ -665,12 +676,9 @@ function print_initial(initial)
 Sorting uses a standard Quick Sort, with the @code{less_than()}
 function supplying the comparison.
 
+@cindex @file{quicksort()} function
+@cindex @file{quicksort_swap()} function
 @<helper functions@>=
-# quicksort.awk --- Quicksort algorithm, with user-supplied
-#                   comparison function
-#
-# Arnold Robbins, arnoldskeeve.com, Public Domain
-# January 2009
 # quicksort --- C.A.R. Hoare's quick sort algorithm. See Wikipedia
 #               or almost any algorithms or computer science text
 #
@@ -754,6 +762,7 @@ BEGIN {
 
 Here is the @code{less_than()} function.
 
+@cindex @file{less_than()} function
 @<work functions@>=
 function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
 {
@@ -807,29 +816,6 @@ function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
 }
 @
 
-@c ----------------------------------------
-@<helper functions@>=
-function isupper(c)
-{
-	return index("ABCDEFGHIJKLMNOPQRSTUVWXYZ", c)
-}
-
-function islower(c)
-{
-	return index("abcdefghijklmnopqrstuvwxyz", c)
-}
-
-function isalpha(c)
-{
-	return islower(c) || isupper(c)
-}
-
-function isdigit(c)
-{
-	return index("0123456789", c)
-}
-@
-
 @node Necessary Stuff
 @chapter Necessary Stuff That Isn't Thrilling
 
@@ -837,6 +823,9 @@ This @value{CHAPTER} provides a number of parts
 that are necessary but not exciting.
 
 @menu
+* Copyright Statement::         Copyright info.
+* Library Functions::           Necessary library functions.
+* Helper Functions::            Helper functions.
 @end menu
 
 @node Copyright Statement
@@ -872,7 +861,10 @@ The program uses several library routines discussed in detail
 in the @command{gawk} documentation.  The first sets up the
 infrastructure for the @code{beginfile()} and @code{endfile()} functions.
 @FIXME{Add URL here.}
+See @uref{http://www.gnu.org/software/gawk/manual/html_node/Filetrans-Function.html}
+for explanation of how this function works.
 
+@cindex @file{ftrans.awk} library file
 @<library functions@>=
 # ftrans.awk --- handle data file transitions
 #
@@ -893,8 +885,10 @@ END  { endfile(_filename_) }
 
 The next function is @code{join()}, which joins
 an array of characters back into a string.
-@FIXME{Add URL here.}
+See @uref{http://www.gnu.org/software/gawk/manual/html_node/Join-Function.html}
+for explanation of how this function works.
 
+@cindex @code{join()} function
 @<library functions@>=
 # join.awk --- join an array into a string
 #
@@ -921,6 +915,7 @@ A number of helper functions make the main code easier
 to follow.
 @code{del_array()} clears out an array.
 
+@cindex @code{del_array()} function
 @<helper functions@>=
 function del_array(a)
 {
@@ -937,6 +932,7 @@ character off into a separate element. If so, the return value will
 be the number of elements in the array, and it will be more than one.
 It is called at program startup.
 
+@cindex @code{check_split_null()} function
 @<helper functions@>=
 function check_split_null(		n, a)
 {
@@ -949,6 +945,7 @@ This function splits a string into separate characters, letting
 @command{awk} do the work if possible. If not, each character
 is extracted manually using a loop and @code{substr()}.
 
+@cindex @code{char_split()} function
 @<helper functions@>=
 function char_split(string, array,		n, i)
 {
@@ -968,6 +965,8 @@ function char_split(string, array,		n, i)
 The @code{usage()} and @code{version()} functions print the
 necessary information and then exit.
 
+@cindex @code{usage()} function
+@cindex @code{version()} function
 @<helper functions@>=
 function usage(exit_val)
 {
@@ -1002,6 +1001,7 @@ function version()
 The @code{fatal()} function prints a fatal error message
 and then exits.
 
+@cindex @code{fatal()} function
 @<helper functions@>=
 function fatal(format, arg1, arg2, arg3, arg4, arg5,
 						arg6, arg7, arg8, arg9, arg10)
@@ -1009,6 +1009,39 @@ function fatal(format, arg1, arg2, arg3, arg4, arg5,
 	printf(format, arg1, arg2, arg3, arg4, arg5,
 			arg6, arg7, arg8, arg9, arg10) > "/dev/stderr"
 	exit EXIT_FAILURE
+}
+@
+
+@cindex @code{isupper()} function
+@cindex @code{islower()} function
+@cindex @code{isalpha()} function
+@cindex @code{isdigit()} function
+The following functions help identify what a character is; they are
+similar in function to the various macros in the C @code{<ctype.h>}
+header file.  Since each one returns a count, the return value
+could be used to compute which character from the set was seen;
+this turned out not to be necessary in this program but it might
+useful in some other context.
+
+@<helper functions@>=
+function isupper(c)
+{
+	return index("ABCDEFGHIJKLMNOPQRSTUVWXYZ", c)
+}
+
+function islower(c)
+{
+	return index("abcdefghijklmnopqrstuvwxyz", c)
+}
+
+function isalpha(c)
+{
+	return islower(c) || isupper(c)
+}
+
+function isdigit(c)
+{
+	return index("0123456789", c)
 }
 @
 
@@ -1020,9 +1053,9 @@ all the file definitions, the code chunk definitions,
 and the code chunk references.
 
 @menu
-* File Definitions::          Source files by definition.
-* Code Chunk Definitions::    Code chunks by definition.
-* Code Chunk References::     Code chunks by reference.
+* File Definitions::            Source files by definition.
+* Code Chunk Definitions::      Code chunks by definition.
+* Code Chunk References::       Code chunks by reference.
 @end menu
 
 @node File Definitions
