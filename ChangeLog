@@ -1,3 +1,9 @@
+2014-02-27         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* ti.twjr: Revise extraction of the initial as per Karl.
+	Still needs more documentation but I think we've hit
+	functionally complete.
+
 2014-02-26         Arnold D. Robbins     <arnold@skeeve.com>
 
 	* ti.twjr: Sorting in and seems to work well. Still need to add
