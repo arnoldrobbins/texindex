@@ -1,3 +1,9 @@
+2014-03-03         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* ti.twjr: Rework where initial extraction is done. Set up to
+	produce \{ and \}. Works when used with itself to sort the
+	index!  Woo hoo!
+
 2014-02-27         Arnold D. Robbins     <arnold@skeeve.com>
 
 	* ti.twjr: Revise extraction of the initial as per Karl.

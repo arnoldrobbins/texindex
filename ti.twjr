@@ -7,11 +7,15 @@
 
 @xrefautomaticsectiontitle on
 
+@tex
+\global\usebracesinindexestrue
+@end tex
+
 @c The following information should be updated here only!
 @c This sets the edition of the document.
 
 @c These apply across the board.
-@set UPDATE-MONTH February, 2014
+@set UPDATE-MONTH March, 2014
 @set EDITION 0.1
 
 @set TITLE Texindex: A Program For Sorting Indices
@@ -322,9 +326,33 @@ In the rest of the program we make two fundamental assumptions:
 
 @enumerate 1
 @item
-The mapping of sort key to display text is unique.  The second time we
-encounter a given sort key, we assume that the display text is the same
-and only pay attention to the page number.
+The mapping of sort key to display text should be unique, with
+only the line number changing each time.
+If the same sort key has two different display texts, it means that
+different markup was used, probably inadvertently. For example, suppose
+you have the following input:
+
+@example
+@@cindex @@file@{field_split()@} function
+@dots{}
+@@cindex @@code@{field_split()@} function
+@end example
+
+@noindent
+This produces the following output from @file{texinfo.tex},
+which in turn is the input to @command{texindex}:
+
+@example
+\entry@{field_split() function@}@{2@}@{\file @{field_split()@} function@}
+\entry@{field_split() function@}@{7@}@{\code @{field_split()@} function@}
+@end example
+
+@noindent
+This is actually OK; the results will be visible in the final
+index as two identical appearing entries (most likely with different
+page numbers). This should cause the author of the document to search
+for entries that are identical with respect to text but that differ
+in their use of Texinfo markup.
 
 @item
 For the same sort key and text, page numbers will be monotonically increasing.
@@ -387,7 +415,7 @@ in using Autoconf.
 @
 
 The initial setup sets up some constants, including
-the version of the proram.
+the version of the program.
 The last line sets up @code{Can_split_null} which tells
 us if the built-in @code{split()} function will split
 apart a string into its individual characters or if we
@@ -439,7 +467,7 @@ for (i = 1; i < ARGC; i++) {
 @node Processing Records
 @chapter Processing Records
 
-Procesing records includes setting things up for each
+Processing records includes setting things up for each
 input file, pulling apart each record, sorting the data
 at the end, and writing out the data properly.
 
@@ -505,8 +533,10 @@ processed.
 @<process a record@> =
 {
 	@<Remove duplicates@>
+	@<Remove leading @code{\entry}@>
+	@<Get the initial@>
 	@<Set up @code{fields} array with the data@>
-	@<Name the fields and get the initial@>
+	@<Name the fields@>
 	@<Store the data for the line in the @code{Data} array@>
 	@<Check for more than one initial@>
 }
@@ -525,6 +555,54 @@ if ($0 in Seen)
 Seen[$0]++
 @
 
+@<Remove leading @code{\entry}@>=
+# Use substr to avoid hassles with leading backslash in sub()
+$0 = substr($0, 7)		# remove leading \entry
+@
+
+@<Get the initial@>=
+initial = extract_initial($0)
+@
+
+Extracting the initial is mildly complicated.
+Braces can be nested, and in particular the very first field of
+the sort key can be an open brace. So it is necessary to skip leading
+open braces until we encounter the first real character.  This in turn
+could be @samp{@{} or @samp{@}} preceded by the command character, or
+another character.
+
+A direct example can be seen in what older versions of @file{texinfo.tex}
+generated if you needed to index a real backslash.  You get something
+like the following:
+
+@example
+\entry@{@{\tt \indexbackslash @} (backslash)@}@{14@}@{\code @{@{\tt \backslashcurfont @}@} (backslash)@}
+@end example
+
+Fortunately, the first non-brace character is a backslash, and that
+becomes the initial.
+
+@cindex @code{extract_initial()} function
+@<work functions@>=
+function extract_initial(key,	initial, nextchar, i, l, kchars)
+{
+	l = char_split(key, kchars)
+	for (i = 1; i <= l; i++)
+		if (kchars[i] != "{")
+			break
+
+	if (i > l)
+		fatal("%s:%d: Bad key %s in record\n", FILENAME, FNR, key)
+
+	initial = toupper(kchars[i])
+	nextchar = kchars[i+1]
+	if (initial == Command_char && (nextchar == "{" || nextchar == "}"))
+		initial = nextchar
+
+	return initial
+}
+@
+
 The next part is to pull out the data of interest from the three sets of
 braces. This is delegated to a function named @code{field_split()}. Before
 doing so, we remove the leading command character and the word @samp{entry}.
@@ -532,25 +610,18 @@ There must be exactly three fields.
 
 @cindex @code{field_split()} function
 @<Set up @code{fields} array with the data@>=
-# Use substr to avoid hassles with leading backslash in sub()
-$0 = substr($0, 7)		# remove leading \entry
 numfields = field_split($0, fields, "{", "}", Command_char)
 if (numfields != 3)
 	fatal("%s:%d: Bad entry", FILENAME, FNR)
 @
 
-We give the fields names, and then get the initial for the sort key,
-which is the first character, unless it happens to be special, in which
-case it is the second.  We store just the character, since we need it
-for comparison purposes later.
+We give the fields names for later use.
 
 @cindex @code{extract_initial()} function
-@<Name the fields and get the initial@>=
+@<Name the fields@>=
 key = fields[1]
 linenum = fields[2]
 text = fields[3]
-
-initial = extract_initial(key)
 @
 
 @cindex @code{Keys} array
@@ -603,7 +674,11 @@ looks something like:
 The first field may have instances of @samp{@@@{} and/or @samp{@@@}}, so
 the braces aren't necessarily exactly balanced.
 
-@FIXME{Split this out into more chunks.}
+The @code{field_split()} function uses pretty straightforward ``count
+the delimiters'' code.  The loop starts at 2, since we know the first
+character is an open brace.  The main things to handle are the
+command character and the final closing brace.  The third field is
+taken as a whole; this is described shortly.
 
 @cindex @code{field_split()} function
 @<work functions@>=
@@ -619,25 +694,15 @@ function field_split( \
 	delim_count = 1
 	for (i = 2; i <= numchars; i++) {
 		if (chars[i] == com_ch) {
-			if (index(Special_chars, chars[i+1]) != 0) {
-				out[k++] = chars[i+1]
-				i++
-			} else {
-				out[k++] = chars[i]
-			}
+			@<Handle the character after the command character@>
 		} else if (chars[i] == start) {
 			delim_count++
 			out[k++] = chars[i]
 		} else if (chars[i] == end) {
 			delim_count--
-			if (delim_count == 0) {
-				fields[j++] = join(out, 1, k-1, SUBSEP)
-				del_array(out)	# reset for next time through
 
-				i++
-				if (i <= numchars && chars[i] != start)
-					fatal("%s:%d: Bad entry", FILENAME, FNR)
-				delim_count = 1
+			if (delim_count == 0) {
+				@<Finish off the field, set up for next field@>
 			} else {
 				out[k++] = chars[i]
 			}
@@ -645,39 +710,58 @@ function field_split( \
 			out[k++] = chars[i]
 		}
 
-		if (j == 3) {	# Per Karl, just grab the whole rest of the line
-			# extract everything between the outer delimiters
-			fields[3] = substr(record, i + 1, numchars - i - 1)
-			break
-		}
+		@<Special case the third field@>
 	}
 
 	return j	# num fields
 }
 @
 
-@FIXME{Write explanation here.}
+If the character following the command character is an
+open brace, close brace, or the command character itself,
+we pull it in. Otherwise, the command character is left
+alone as part of the field.
 
-@cindex @code{extract_initial()} function
-@<work functions@>=
-function extract_initial(key,	initial, nextchar, i, l, kchars)
-{
-	l = char_split(key, kchars)
-	for (i = 1; i <= l; i++)
-		if (kchars[i] != "{")
-			break
-
-	if (i > l)
-		fatal("%s:%d: Bad key %s in record\n", FILENAME, FNR, key)
-
-	initial = toupper(kchars[i])
-	nextchar = kchars[i+1]
-	if (initial == Command_char && (nextchar == "{" || nextchar == "}"))
-		initial = nextchar
-
-	return initial
+@<Handle the character after the command character@>=
+if (index(Special_chars, chars[i+1]) != 0) {
+	out[k++] = chars[i+1]
+	i++
+} else {
+	out[k++] = chars[i]
 }
 @
+
+Upon seeing the final closing brace, we put all the characters
+back together into a string using @code{join()}.
+We then reset the @code{out} array for the next time through.
+If the next character isn't an open brace, then the line is bad
+and we print a fatal error. Otherwise, we reset @code{delim_count}
+to one.
+
+@cindex @code{join()} function
+@<Finish off the field, set up for next field@>=
+fields[j++] = join(out, 1, k-1, SUBSEP)
+del_array(out)	# reset for next time through
+
+i++
+if (i <= numchars && chars[i] != start)
+	fatal("%s:%d: Bad entry", FILENAME, FNR)
+delim_count = 1
+@
+
+The third field is special. We just take the whole thing
+as is.  This is done by effectively stripping off the braces,
+using @code{substr()}.
+We then break out of the loop, since we're done.
+
+@<Special case the third field@>=
+if (j == 3) {	# Per Karl, just grab the whole rest of the line
+	# extract everything between the outer delimiters
+	fields[3] = substr(record, i + 1, numchars - i - 1)
+	break
+}
+@
+
 
 @node End File Processing
 @section Sorting And Printing
@@ -775,8 +859,6 @@ function quicksort_swap(data, i, j, temp)
 @node Entry Comparison
 @section Comparing Index Entries
 
-@FIXME{Expand text here.}
-
 The comparison function is the heart of the sorting algorithm.
 The comparison is based on the indexing rules, which are:
 
@@ -792,10 +874,25 @@ Followed by letters. Lowercase precedes uppercase and both ``a''
 and ``A'' precede anything starting with ``b'' or ``B'' (etc.).
 @end itemize
 
-To implement these rules, we will need a table
-that maps characters to comnparison values, and then does
-the comparison.
+Implementing these rules is a little complicated.
+The first thing we need is a table
+that maps characters to comparison values.
+The following code is based on the original C @command{texindex},
+although the actual comparison algorithm is more sophisticated.
 
+The @code{Ordval} array maps characters to numeric
+values.  Most characters map to their ASCII code.
+We add 512 to value of each of the digits.
+Both uppercase and lowercase letters map to the same
+numeric value, which is the ASCII code for the uppercase
+letter plus 512.
+
+The table must be built completely before changing the
+mapping of the letters, because all of the uppercase and
+lowercase letters must be in the table before we can
+change their values.
+
+@cindex @code{Ordval} array.
 @<work functions@>=
 BEGIN {
 	for (i = 0; i < 256; i++) {
@@ -808,22 +905,82 @@ BEGIN {
 	}
 
 	# Give both 'A' and 'a' the same code
-	for (i = 0; i < 256; i++) {
+	i = Ordval["A"]
+	j = Ordval["Z"]
+	for (; i <= j; i++) {
 		c = sprintf("%c", i)
-		# in ASCII, 'A' is before 'a', so this is
-		# the right order to check
-		if (isupper(c)) {
-			Ordval[c] = Ordval[tolower(c)] + 512
-		}
 
-		if (islower(c)) {
+		# In ASCII, 'A' is before 'a', so this is
+		# the right order to check
+		#
+		# Checking isupper() lets this work for EBCDIC, too.
+
+		if (isupper(c)) {
 			Ordval[c] += 512
+			Ordval[tolower(c)] = Ordval[c]
 		}
 	}
 }
 @
 
-Here is the @code{less_than()} function.
+Here is the @code{less_than()} function. It returns true
+if the @code{left} string is ``less than'' the @code{right}
+string.
+
+The comparison
+algorithm is relatively straightforward, once we define
+how things should work.  We loop over each pair of
+characters in the @code{left} and @code{right}
+strings, comparing them one at a time.
+When comparing two characters,
+there are three cases, one of which has three subcases, as
+follows:
+
+@itemize @bullet
+@item Two letters
+
+@c nested list
+@itemize @minus
+@item Same letter, but different case
+This is the complicated case. First, we want lowercase letters
+to be ordered before uppercase ones, even though this is the
+opposite of the nature ASCII ordering.  To make this happen,
+we use a @samp{>} comparison instead of a @samp{<} comparison.
+
+Second, when two characters are equal, we have to look ahead
+at the next characters to decide whether to continue the
+loop or quit. As long as we are not at the end of the string,
+and at least one of the following characters is a letter,
+we continue the loop. Otherwise we do the character comparison
+and return.
+
+@item Two different letters, but same case
+Use the comparison of the respective @code{Ordval} values.
+
+@item Two different letters, different case
+Use the comparison of the respective @code{Ordval} values.
+@end itemize
+@c end nested list
+
+@item A letter and something else
+Use the comparison of the respective @code{Ordval} values.
+
+@item Two nonletters
+Use the comparison of the respective @code{Ordval} values.
+
+@end itemize
+
+@noindent
+When the values are equal, continue around the loop.
+And, as usual, if one string is an initial substring
+of the other, that one is considered to be ``less than''
+the other one.
+
+The rules just described actually produce @emph{better}
+results than did the C version of @command{texindex}.
+For example, @samp{beginfile()} sorts out to be before
+@samp{BEGINFILE}, whereas with the C version they came out
+in the opposite order.
 
 @cindex @code{less_than()} function
 @<work functions@>=
@@ -842,16 +999,15 @@ function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
 			# Upper case comes out last
 			if (chars_l[i] != chars_r[i] &&
 				tolower(chars_l[i]) == tolower(chars_r[i])) {
-					if (i != len && (isalpha(chars_l[i+1]) || isalpha(chars_r[i+1])))
+					if (   i != len \
+						&& (isalpha(chars_l[i+1]) || isalpha(chars_r[i+1])))
 						continue
 					if (chars_l[i] > chars_r[i])
 						return 1
 					return 0
 			}
-			# same case, different char
-			# letter order wins
-
-			# different case, different char
+			# same case, different char,
+			# or different case, different char:
 			# letter order wins
 			if (Ordval[chars_l[i]] < Ordval[chars_r[i]])
 				return 1
@@ -866,6 +1022,7 @@ function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
 		# letter and something else, or two non-letters
 		if (Ordval[chars_l[i]] < Ordval[chars_r[i]])
 			return 1
+
 		if (Ordval[chars_l[i]] > Ordval[chars_r[i]])
 			return 0
 
@@ -994,7 +1151,7 @@ function del_array(a)
 @
 
 This function checks if the @command{awk} running this program
-supports using the null string for the separater, splitting each
+supports using the null string for the separator, splitting each
 character off into a separate element. If so, the return value will
 be the number of elements in the array, and it will be more than one.
 It is called at program startup.
