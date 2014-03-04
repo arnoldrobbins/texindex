@@ -16,7 +16,7 @@
 
 @c These apply across the board.
 @set UPDATE-MONTH March, 2014
-@set EDITION 0.1
+@set EDITION 0.9
 
 @set TITLE Texindex: A Program For Sorting Indices
 @set SHORTTITLE Texindex
@@ -139,7 +139,8 @@ URL: @uref{http://www.gnu.org/} @*
 @end ifnotdocbook
 @end titlepage
 
-@set DRAFT @i{DRAFT}
+@c @set DRAFT @i{DRAFT}
+@set DRAFT
 
 @iftex
 @headings off
@@ -217,6 +218,16 @@ and @samp{@}} as characters that can be listed correctly in the index.
 You should read this @value{DOCUMENT} if you want to understand
 how @file{texindex.awk} works. You should be familiar with
 the @command{awk} programming language.
+
+If you are interested in array indexing, you've come to
+the wrong place. @xref{knuth}.
+
+@c Scale figure to 4.5 inches which is good for both smallbook
+@c and regular.  TeX will scale height also automatically.
+@float Figure,knuth
+@caption{Indexing (@url{http://xkcd.com/163/})}
+@center @image{donald_knuth, 5in, , Indexing}
+@end float
 
 @node Conventions
 @unnumberedsec Typographical Conventions
@@ -298,7 +309,7 @@ braces can be included in the sort key by escaping them with the
 @dfn{command character}. This is the first character on the line. It is
 either a backslash, or a Texinfo at-sign, @samp{@@}.
 
-The job is sort the entries, and merge those which are identical,
+The job is to sort the entries, and merge those which are identical,
 except for the page numbers.  For the above two entries, the output
 should be:
 
@@ -457,7 +468,10 @@ for (i = 1; i < ARGC; i++) {
 	else if (ARGV[i] == "-k" || ARGV[i] == "--keep") {
 		# do nothing, backwards compatibility
 		delete ARGV[i]
-	} else if (ARGV[i] ~ /^--?.*/)
+	} else if (ARGV[i] == "--") {
+		delete ARGV[i]
+		break
+	} else if (ARGV[i] ~ /^--?.+/)
 		usage(EXIT_FAILURE)
 	else
 		break
@@ -489,7 +503,7 @@ version of @command{texindex} to specify an output file
 was never used and is purposely not carried forward into this
 version of the program.
 
-The first record
+When @code{beginfile()} is called, the first record
 has already been read, so it's possible to perform the
 checks for a Texinfo index file: The first character
 must be either @samp{\} or @samp{@@}, and the next five
@@ -517,7 +531,7 @@ function beginfile(filename)
 	Command_char = substr($0, 1, 1)
 	if (   (Command_char != "\\" && Command_char != "@") \
 	    || substr($0, 2, 5) != "entry")
-		fatal("%s is not a Texinfo index file", filename)
+		fatal("%s is not a Texinfo index file\n", filename)
 
 	Special_chars = "{}" Command_char
 }
@@ -572,11 +586,11 @@ could be @samp{@{} or @samp{@}} preceded by the command character, or
 another character.
 
 A direct example can be seen in what older versions of @file{texinfo.tex}
-generated if you needed to index a real backslash.  You get something
-like the following:
+generated if you needed to index a real backslash.  You get an input
+line something like the following:
 
 @example
-\entry@{@{\tt \indexbackslash @} (backslash)@}@{14@}@{\code @{@{\tt \backslashcurfont @}@} (backslash)@}
+\entry@{@{\tt \indexbackslash @} (backslash)@}@{14@}@{\code @{@{\tt @dots{}
 @end example
 
 Fortunately, the first non-brace character is a backslash, and that
@@ -604,15 +618,14 @@ function extract_initial(key,	initial, nextchar, i, l, kchars)
 @
 
 The next part is to pull out the data of interest from the three sets of
-braces. This is delegated to a function named @code{field_split()}. Before
-doing so, we remove the leading command character and the word @samp{entry}.
+braces. This is delegated to a function named @code{field_split()}.
 There must be exactly three fields.
 
 @cindex @code{field_split()} function
 @<Set up @code{fields} array with the data@>=
 numfields = field_split($0, fields, "{", "}", Command_char)
 if (numfields != 3)
-	fatal("%s:%d: Bad entry", FILENAME, FNR)
+	fatal("%s:%d: Bad entry\n", FILENAME, FNR)
 @
 
 We give the fields names for later use.
@@ -631,7 +644,7 @@ We use a traditional @command{awk} multidimensional array to store
 the various bits and pieces. The subscripts are based on the sort key,
 and the parts are the @code{"linenum"}, the output @code{"text"},
 and the @code{"initial"}. In addition, the key is stored as data
-in the @code{Entries} array.  This array is what is sorted later on.
+in the @code{Entries} array.  This array is sorted later on.
 
 The key and the text are invariant across entries; only the line
 number changes, so we use the key and text as the unique index
@@ -656,15 +669,15 @@ on subsequent lines.
 @cindex @code{Do_initials} variable
 @<Check for more than one initial@> =
 if (! Do_initials) {
-	if (prev_initial == "")
-		prev_initial = initial
-	else if (initial != prev_initial)
+	if (Prev_initial == "")
+		Prev_initial = initial
+	else if (initial != Prev_initial)
 		Do_initials = TRUE
 }
 @
 
-Let's take a look at the function that breaks apart
-the record. Upon input, the value of @code{record}
+Let's take a look at the function that breaks apart the record.
+Upon entry to the function, the value of @code{record}
 looks something like:
 
 @example
@@ -703,12 +716,10 @@ function field_split( \
 
 			if (delim_count == 0) {
 				@<Finish off the field, set up for next field@>
-			} else {
+			} else
 				out[k++] = chars[i]
-			}
-		} else {
+		} else
 			out[k++] = chars[i]
-		}
 
 		@<Special case the third field@>
 	}
@@ -726,9 +737,8 @@ alone as part of the field.
 if (index(Special_chars, chars[i+1]) != 0) {
 	out[k++] = chars[i+1]
 	i++
-} else {
+} else
 	out[k++] = chars[i]
-}
 @
 
 Upon seeing the final closing brace, we put all the characters
@@ -742,15 +752,16 @@ to one.
 @<Finish off the field, set up for next field@>=
 fields[j++] = join(out, 1, k-1, SUBSEP)
 del_array(out)	# reset for next time through
+k = 1
 
 i++
 if (i <= numchars && chars[i] != start)
-	fatal("%s:%d: Bad entry", FILENAME, FNR)
+	fatal("%s:%d: Bad entry\n", FILENAME, FNR)
 delim_count = 1
 @
 
 The third field is special. We just take the whole thing
-as is.  This is done by effectively stripping off the braces,
+as is.  This is done by stripping off the outermost braces,
 using @code{substr()}.
 We then break out of the loop, since we're done.
 
@@ -828,8 +839,6 @@ function supplying the comparison.
 #               or almost any algorithms or computer science text
 #
 # Adapted from K&R-II, page 110
-#
-# Further adapted for use in texindex
 
 function quicksort(data, left, right,    i, last)
 {
@@ -846,7 +855,7 @@ function quicksort(data, left, right,    i, last)
     quicksort(data, last + 1, right)
 }
 
-# quicksort_swap --- helper function for quicksort, should really be inline
+# quicksort_swap --- quicksort helper function, could be inline
 
 function quicksort_swap(data, i, j, temp)
 {
@@ -936,15 +945,15 @@ When comparing two characters,
 there are three cases, one of which has three subcases, as
 follows:
 
-@itemize @bullet
+@table @i
 @item Two letters
 
-@c nested list
-@itemize @minus
+@c nested table
+@table @i
 @item Same letter, but different case
 This is the complicated case. First, we want lowercase letters
 to be ordered before uppercase ones, even though this is the
-opposite of the nature ASCII ordering.  To make this happen,
+opposite of the natural ASCII ordering.  To make this happen,
 we use a @samp{>} comparison instead of a @samp{<} comparison.
 
 Second, when two characters are equal, we have to look ahead
@@ -955,20 +964,16 @@ we continue the loop. Otherwise we do the character comparison
 and return.
 
 @item Two different letters, but same case
+@itemx Two different letters, different case
 Use the comparison of the respective @code{Ordval} values.
-
-@item Two different letters, different case
-Use the comparison of the respective @code{Ordval} values.
-@end itemize
-@c end nested list
+@end table
+@c end nested table
 
 @item A letter and something else
+@itemx Two nonletters
 Use the comparison of the respective @code{Ordval} values.
 
-@item Two nonletters
-Use the comparison of the respective @code{Ordval} values.
-
-@end itemize
+@end table
 
 @noindent
 When the values are equal, continue around the loop.
@@ -1000,7 +1005,8 @@ function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
 			if (chars_l[i] != chars_r[i] &&
 				tolower(chars_l[i]) == tolower(chars_r[i])) {
 					if (   i != len \
-						&& (isalpha(chars_l[i+1]) || isalpha(chars_r[i+1])))
+						&& (isalpha(chars_l[i+1]) \
+							|| isalpha(chars_r[i+1])))
 						continue
 					if (chars_l[i] > chars_r[i])
 						return 1
@@ -1020,6 +1026,7 @@ function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
 		}
 
 		# letter and something else, or two non-letters
+		# letter order wins
 		if (Ordval[chars_l[i]] < Ordval[chars_r[i]])
 			return 1
 
@@ -1029,7 +1036,8 @@ function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
 		# equal, keep going
 	}
 
-	if (len_r > len_l)
+	# equal so far, shorter one wins
+	if (len_l < len_r)
 		return 1
 
 	return 0
@@ -1085,7 +1093,7 @@ The program uses several library routines discussed in detail
 in the @command{gawk} documentation.  The first sets up the
 infrastructure for the @code{beginfile()} and @code{endfile()} functions.
 See @uref{http://www.gnu.org/software/gawk/manual/html_node/Filetrans-Function.html}
-for explanation of how this function works.
+for an explanation of how this function works.
 
 @cindex @file{ftrans.awk} library file
 @<library functions@>=
@@ -1109,7 +1117,7 @@ END  { endfile(_filename_) }
 The next function is @code{join()}, which joins
 an array of characters back into a string.
 See @uref{http://www.gnu.org/software/gawk/manual/html_node/Join-Function.html}
-for explanation of how this function works.
+for an explanation of how this function works.
 
 @cindex @file{join.awk} library file
 @cindex @code{join()} function
@@ -1202,6 +1210,7 @@ function usage(exit_val)
 	print "Options:"
 	print " -h, --help 	display this help and exit"
 	print " --version 	display version information and exit"
+	print " --		end option processing"
 	print ""
 	print "Email bug reports to bug-texinfo@gnu.org,"
 	print "general questions and discussion to help-texinfo@gnu.org."
@@ -1212,7 +1221,7 @@ function usage(exit_val)
 
 function version()
 {
-	print "texindex (GNU texinfo) " Texindex_Version
+	print "texindex (GNU texinfo)", Texindex_Version
 	print ""
 	print "Copyright (C) 2014 Free Software Foundation, Inc."
 	print "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>"

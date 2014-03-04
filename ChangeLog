@@ -1,3 +1,8 @@
+2014-03-04         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* ti.twjr: Polished up. Add an XKCD cartoon. Bump version to 0.9.
+	* donald_knuth.jpg: New file.
+
 2014-03-03         Arnold D. Robbins     <arnold@skeeve.com>
 
 	* ti.twjr: Rework where initial extraction is done. Set up to
