@@ -5,6 +5,14 @@
 @settitle Texindex: A Program For Sorting Indices
 @c %**end of header (This is for running Texinfo on a region.)
 
+@c Change how xref titles are quoted.
+@dquotexrefs
+@ifclear FORPRINT
+@pdflinkcolor
+@urllinkcolor
+@hideurls
+@end ifclear
+
 @xrefautomaticsectiontitle on
 
 @tex
