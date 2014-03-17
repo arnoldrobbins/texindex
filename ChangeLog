@@ -1,3 +1,7 @@
+2014-03-17         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* ti.twjr: Fix case in chunk names.
+
 2014-03-14         Arnold D. Robbins     <arnold@skeeve.com>
 
 	* ti.twjr: Add a few commands to make the PDF nicer.

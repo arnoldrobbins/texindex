@@ -395,10 +395,10 @@ The general outline is as follows:
 @post_create texindex.awk chmod +x texindex.awk
 
 @(texindex.awk@) =
-@<shebang header@>
+@<Shebang header@>
 @<GPL 3 Copyright statement@>
-@<library functions@>
-@<helper functions@>
+@<Library functions@>
+@<Helper functions@>
 
 BEGIN {
 	@<Initial stuff@>
@@ -408,9 +408,9 @@ BEGIN {
 @<@code{beginfile()} function@>
 @<@code{endfile()} function@>
 
-@<process a record@>
+@<Process a record@>
 
-@<work functions@>
+@<Work functions@>
 @
 
 In the program itself, we follow a convenient convention:
@@ -429,7 +429,7 @@ For development, I've used the location of @command{gawk}
 on my system. For production, the value will be substituted
 in using Autoconf.
 
-@<shebang header@> =
+@<Shebang header@> =
 #! /usr/local/bin/gawk -f
 @
 
@@ -552,7 +552,7 @@ Record processing consists of building the data structures
 for use in sorting and printing once the whole file has been
 processed.
 
-@<process a record@> =
+@<Process a record@> =
 {
 	@<Remove duplicates@>
 	@<Remove leading @code{\entry}@>
@@ -605,7 +605,7 @@ Fortunately, the first non-brace character is a backslash, and that
 becomes the initial.
 
 @cindex @code{extract_initial()} function
-@<work functions@>=
+@<Work functions@>=
 function extract_initial(key,	initial, nextchar, i, l, kchars)
 {
 	l = char_split(key, kchars)
@@ -702,7 +702,7 @@ command character and the final closing brace.  The third field is
 taken as a whole; this is described shortly.
 
 @cindex @code{field_split()} function
-@<work functions@>=
+@<Work functions@>=
 function field_split( \
 	record, fields, start, end, com_ch,			# parameters
 	chars, numchars, out, delim_count, i, j, k) # locals
@@ -824,7 +824,7 @@ is to precede special characters with the command character.
 @cindex @code{Command_char} variable
 @cindex @code{Do_initials} variable
 @cindex @code{print_initial()} function
-@<work functions@>=
+@<Work functions@>=
 function print_initial(initial)
 {
 	if (Do_initials) {
@@ -842,7 +842,7 @@ function supplying the comparison.
 @cindex @code{less_than()} function
 @cindex @code{quicksort()} function
 @cindex @code{quicksort_swap()} function
-@<helper functions@>=
+@<Helper functions@>=
 # quicksort --- C.A.R. Hoare's quick sort algorithm. See Wikipedia
 #               or almost any algorithms or computer science text
 #
@@ -910,7 +910,7 @@ lowercase letters must be in the table before we can
 change their values.
 
 @cindex @code{Ordval} array.
-@<work functions@>=
+@<Work functions@>=
 BEGIN {
 	for (i = 0; i < 256; i++) {
 		c = sprintf("%c", i)
@@ -996,7 +996,7 @@ For example, @samp{beginfile()} sorts out to be before
 in the opposite order.
 
 @cindex @code{less_than()} function
-@<work functions@>=
+@<Work functions@>=
 function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
 {
 	len_l = length(left)
@@ -1104,7 +1104,7 @@ See @uref{http://www.gnu.org/software/gawk/manual/html_node/Filetrans-Function.h
 for an explanation of how this function works.
 
 @cindex @file{ftrans.awk} library file
-@<library functions@>=
+@<Library functions@>=
 # ftrans.awk --- handle data file transitions
 #
 # user supplies beginfile() and endfile() functions
@@ -1129,7 +1129,7 @@ for an explanation of how this function works.
 
 @cindex @file{join.awk} library file
 @cindex @code{join()} function
-@<library functions@>=
+@<Library functions@>=
 # join.awk --- join an array into a string
 #
 # Arnold Robbins, arnold@skeeve.com, Public Domain
@@ -1156,7 +1156,7 @@ to follow.
 @code{del_array()} clears out an array.
 
 @cindex @code{del_array()} function
-@<helper functions@>=
+@<Helper functions@>=
 function del_array(a)
 {
 	# Portable and faster than
@@ -1173,7 +1173,7 @@ be the number of elements in the array, and it will be more than one.
 It is called at program startup.
 
 @cindex @code{check_split_null()} function
-@<helper functions@>=
+@<Helper functions@>=
 function check_split_null(		n, a)
 {
 	n = split("abcde", a, "")
@@ -1186,7 +1186,7 @@ This function splits a string into separate characters, letting
 is extracted manually using a loop and @code{substr()}.
 
 @cindex @code{char_split()} function
-@<helper functions@>=
+@<Helper functions@>=
 function char_split(string, array,		n, i)
 {
 	if (Can_split_null)
@@ -1208,7 +1208,7 @@ necessary information and then exit.
 @cindex @code{Texindex_Version} variable
 @cindex @code{usage()} function
 @cindex @code{version()} function
-@<helper functions@>=
+@<Helper functions@>=
 function usage(exit_val)
 {
 	print "Usage: texindex [OPTION]... FILE..."
@@ -1244,7 +1244,7 @@ The @code{fatal()} function prints a fatal error message
 and then exits.
 
 @cindex @code{fatal()} function
-@<helper functions@>=
+@<Helper functions@>=
 function fatal(format, arg1, arg2, arg3, arg4, arg5,
 						arg6, arg7, arg8, arg9, arg10)
 {
@@ -1265,7 +1265,7 @@ could be used to compute which character from the set was seen;
 this turned out not to be necessary in this program but it might
 useful in some other context.
 
-@<helper functions@>=
+@<Helper functions@>=
 function isupper(c)
 {
 	return index("ABCDEFGHIJKLMNOPQRSTUVWXYZ", c)
