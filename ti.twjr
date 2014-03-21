@@ -7,6 +7,8 @@
 
 @c Change how xref titles are quoted.
 @dquotexrefs
+@c Smarter brace handling, you need this texindex!
+@allowindexbraces
 @ifclear FORPRINT
 @pdflinkcolor
 @urllinkcolor
@@ -15,16 +17,12 @@
 
 @xrefautomaticsectiontitle on
 
-@tex
-\global\usebracesinindexestrue
-@end tex
-
 @c The following information should be updated here only!
 @c This sets the edition of the document.
 
 @c These apply across the board.
 @set UPDATE-MONTH March, 2014
-@set EDITION 0.9
+@set EDITION 0.92
 
 @set TITLE Texindex: A Program For Sorting Indices
 @set SHORTTITLE Texindex
@@ -193,6 +191,7 @@ index files produced by the @file{texinfo.tex} macro package for @TeX{}.
 * Copyright Statement::         Copyright info.
 * Library Functions::           Necessary library functions.
 * Helper Functions::            Helper functions.
+* I18N::                        Internationalization.
 * File Definitions::            Source files by definition.
 * Code Chunk Definitions::      Code chunks by definition.
 * Code Chunk References::       Code chunks by reference.
@@ -242,8 +241,13 @@ the wrong place. @xref{knuth}.
 
 @c Copied mostly verbatim from the gawk manual.
 
+@cindex TexiWeb Jr.@: literate programming system
 @cindex Texinfo document formatting language
-This @value{DOCUMENT} is written in an enhanced version of
+This @value{DOCUMENT} is a @dfn{literate program},
+written using the
+@uref{https://github.com/arnoldrobbins/texiwebjr,
+@sc{TexiWeb Jr.@:} literate programming system}.
+The underlying documentation system is
 @uref{http://www.gnu.org/software/texinfo/, Texinfo},
 the GNU documentation formatting language.
 A single Texinfo source file is used to produce both the printed and online
@@ -407,9 +411,7 @@ BEGIN {
 
 @<@code{beginfile()} function@>
 @<@code{endfile()} function@>
-
 @<Process a record@>
-
 @<Work functions@>
 @
 
@@ -465,8 +467,6 @@ The important thing is to remove options and their arguments from
 print version or help information automatically exit, so there's no need
 to mess with @code{ARGV} in those cases.
 
-@c Grrrrr.
-@page
 @<Argument processing@>=
 for (i = 1; i < ARGC; i++) {
 	if (ARGV[i] == "-h" || ARGV[i] == "--help")
@@ -517,13 +517,14 @@ checks for a Texinfo index file: The first character
 must be either @samp{\} or @samp{@@}, and the next five
 characters must be the word @samp{entry}.
 
-@cindex @code{Output_file} variable
-@cindex @code{Command_char} variable
 @cindex @code{Special_chars} variable
 @code{Special_chars} are the three characters that
 must be preceded by the command character inside the
 first key.
 
+@cindex @code{Output_file} variable
+@cindex @code{Command_char} variable
+@cindex @code{Do_initials} variable
 @cindex @code{del_array()} function
 @cindex @code{begin_file()} function
 @<@code{beginfile()} function@>=
@@ -531,7 +532,7 @@ function beginfile(filename)
 {
 	Output_file = filename "s"
 
-	# reinitialize these for each input file
+	# Reinitialize these for each input file
 	del_array(Data)
 	Do_initials = FALSE
 	Prev_initial = ""
@@ -574,14 +575,15 @@ has, and we move on to the next record.
 # Remove duplicates, which can happen
 if ($0 in Seen)
 	next
-Seen[$0]++
+Seen[$0] = TRUE
 @
 
 @<Remove leading @code{\entry}@>=
-# Use substr to avoid hassles with leading backslash in sub()
+# Use substr() to avoid hassles with leading backslash in sub()
 $0 = substr($0, 7)		# remove leading \entry
 @
 
+@cindex @code{extract_initial()} function
 @<Get the initial@>=
 initial = extract_initial($0)
 @
@@ -605,6 +607,7 @@ Fortunately, the first non-brace character is a backslash, and that
 becomes the initial.
 
 @cindex @code{extract_initial()} function
+@cindex @code{char_split()} function
 @<Work functions@>=
 function extract_initial(key,	initial, nextchar, i, l, kchars)
 {
@@ -675,6 +678,7 @@ As soon as it's true, we don't need to do further checking
 on subsequent lines.
 
 @cindex @code{Do_initials} variable
+@cindex @code{Prev_initial} variable
 @<Check for more than one initial@> =
 if (! Do_initials) {
 	if (Prev_initial == "")
@@ -692,7 +696,8 @@ looks something like:
 @{POSIX awk@}@{5@}@{POSIX \command @{awk@}@}
 @end example
 
-The first field may have instances of @samp{@@@{} and/or @samp{@@@}}, so
+The first field may have instances of @samp{@@@{} and/or @samp{@@@}}
+(or @samp{\@{} and/or @samp{\@}}), so
 the braces aren't necessarily exactly balanced.
 
 The @code{field_split()} function uses pretty straightforward ``count
@@ -702,6 +707,7 @@ command character and the final closing brace.  The third field is
 taken as a whole; this is described shortly.
 
 @cindex @code{field_split()} function
+@cindex @code{char_split()} function
 @<Work functions@>=
 function field_split( \
 	record, fields, start, end, com_ch,			# parameters
@@ -808,7 +814,7 @@ function endfile(filename,		i, prev_initial, initial)
 			print_initial(initial)
 		}
 
-		# write the actual line \entry{...}{...}
+		# write the actual line \entry {...}{...}
 		printf("%centry {%s}{%s}\n",
 			Command_char,
 			Data[Keys[i], "text"],
@@ -822,6 +828,7 @@ Printing the initial is not complicated. The main thing
 is to precede special characters with the command character.
 
 @cindex @code{Command_char} variable
+@cindex @code{Special_chars} variable
 @cindex @code{Do_initials} variable
 @cindex @code{print_initial()} function
 @<Work functions@>=
@@ -899,17 +906,19 @@ although the actual comparison algorithm is more sophisticated.
 
 The @code{Ordval} array maps characters to numeric
 values.  Most characters map to their ASCII code.
-We add 512 to value of each of the digits.
+We add 512 to the value of each of the digits.
 Both uppercase and lowercase letters map to the same
 numeric value, which is the ASCII code for the uppercase
-letter plus 512.
+letter plus 512.@footnote{This code should also work for
+EBCDIC systems, although @TeX{} does everything in ASCII,
+so I'm not sure how much of a difference it makes.}
 
 The table must be built completely before changing the
 mapping of the letters, because all of the uppercase and
 lowercase letters must be in the table before we can
 change their values.
 
-@cindex @code{Ordval} array.
+@cindex @code{Ordval} array
 @<Work functions@>=
 BEGIN {
 	for (i = 0; i < 256; i++) {
@@ -940,18 +949,14 @@ BEGIN {
 }
 @
 
-Here is the @code{less_than()} function. It returns true
-if the @code{left} string is ``less than'' the @code{right}
-string.
+Here is the @code{less_than()} function. It returns true if the @code{left}
+string is ``less than'' the @code{right} string.
 
-The comparison
-algorithm is relatively straightforward, once we define
-how things should work.  We loop over each pair of
-characters in the @code{left} and @code{right}
-strings, comparing them one at a time.
-When comparing two characters,
-there are three cases, one of which has three subcases, as
-follows:
+The comparison algorithm is relatively straightforward, once we define
+how things should work.  We loop over each pair of characters in the
+@code{left} and @code{right} strings, comparing them one at a time.
+When comparing two characters, there are three cases, one of which
+has three subcases, as follows:
 
 @table @i
 @item Two letters
@@ -967,7 +972,7 @@ we use a @samp{>} comparison instead of a @samp{<} comparison.
 Second, when two characters are equal, we have to look ahead
 at the next characters to decide whether to continue the
 loop or quit. As long as we are not at the end of the string,
-and at least one of the following characters is a letter,
+and at least one of the following characters in either string is a letter,
 we continue the loop. Otherwise we do the character comparison
 and return.
 
@@ -995,7 +1000,10 @@ For example, @samp{beginfile()} sorts out to be before
 @samp{BEGINFILE}, whereas with the C version they came out
 in the opposite order.
 
+@cindex @code{Ordval} array
+@cindex @code{char_split()} function
 @cindex @code{less_than()} function
+@cindex @code{isalpha()} function
 @<Work functions@>=
 function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
 {
@@ -1009,7 +1017,7 @@ function less_than(left, right,		len_l, len_r, len, chars_l, chars_r)
 	for (i = 1; i <= len; i++) {
 		if (isalpha(chars_l[i]) && isalpha(chars_r[i])) {
 			# same char different case
-			# Upper case comes out last
+			# upper case comes out last
 			if (chars_l[i] != chars_r[i] &&
 				tolower(chars_l[i]) == tolower(chars_r[i])) {
 					if (   i != len \
@@ -1062,6 +1070,7 @@ that are necessary but not exciting.
 * Copyright Statement::         Copyright info.
 * Library Functions::           Necessary library functions.
 * Helper Functions::            Helper functions.
+* I18N::                        Internationalization.
 @end menu
 
 @node Copyright Statement
@@ -1186,6 +1195,8 @@ This function splits a string into separate characters, letting
 is extracted manually using a loop and @code{substr()}.
 
 @cindex @code{char_split()} function
+@cindex @code{Can_split_null} variable
+@cindex @code{del_array()} function
 @<Helper functions@>=
 function char_split(string, array,		n, i)
 {
@@ -1199,44 +1210,6 @@ function char_split(string, array,		n, i)
 		array[i] = substr(string, i, 1)
 
 	return n
-}
-@
-
-The @code{usage()} and @code{version()} functions print the
-necessary information and then exit.
-
-@cindex @code{Texindex_Version} variable
-@cindex @code{usage()} function
-@cindex @code{version()} function
-@<Helper functions@>=
-function usage(exit_val)
-{
-	print "Usage: texindex [OPTION]... FILE..."
-	print "Generate a sorted index for each TeX output FILE."
-	print "Usually FILE... is specified as `foo.??' for a document `foo.texi'."
-	print ""
-	print "Options:"
-	print " -h, --help 	display this help and exit"
-	print " --version 	display version information and exit"
-	print " --		end option processing"
-	print ""
-	print "Email bug reports to bug-texinfo@gnu.org,"
-	print "general questions and discussion to help-texinfo@gnu.org."
-	print "Texinfo home page: http://www.gnu.org/software/texinfo/"
-
-	exit exit_val
-}
-
-function version()
-{
-	print "texindex (GNU texinfo)", Texindex_Version
-	print ""
-	print "Copyright (C) 2014 Free Software Foundation, Inc."
-	print "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>"
-	print "This is free software: you are free to change and redistribute it."
-	print "There is NO WARRANTY, to the extent permitted by law."
-
-	exit EXIT_SUCCESS
 }
 @
 
@@ -1284,6 +1257,62 @@ function isalpha(c)
 function isdigit(c)
 {
 	return index("0123456789", c)
+}
+@
+
+@node I18N
+@section Internationalization
+
+For @command{gawk}, we can arrange for the messages in the
+@code{usage()} and @code{version()} functions to be translated.
+We do this by setting the text domain at startup.
+For more information on internationalization in @command{gawk}, see
+@uref{http://www.gnu.org/software/gawk/manual/html_node/Internationalization.html}.
+
+@<Initial stuff@>=
+TEXTDOMAIN = "texinfo"
+@
+
+@noindent
+On non-GNU versions of @command{awk}, this is harmless.
+
+The @code{usage()} and @code{version()} functions print the
+necessary information and then exit. The strings that
+can and should be translated are prefixed with an
+underscore.
+
+@cindex @code{Texindex_Version} variable
+@cindex @code{usage()} function
+@cindex @code{version()} function
+@<Helper functions@>=
+function usage(exit_val)
+{
+	print _"Usage: texindex [OPTION]... FILE..."
+	print _"Generate a sorted index for each TeX output FILE."
+	print _"Usually FILE... is specified as `foo.??' for a document `foo.texi'."
+	print ""
+	print _"Options:"
+	print _" -h, --help 	display this help and exit"
+	print _" --version 	display version information and exit"
+	print _" --		end option processing"
+	print ""
+	print _"Email bug reports to bug-texinfo@gnu.org,"
+	print _"general questions and discussion to help-texinfo@gnu.org."
+	print _"Texinfo home page: http://www.gnu.org/software/texinfo/"
+
+	exit exit_val
+}
+
+function version()
+{
+	print "texindex (GNU texinfo)", Texindex_Version
+	print ""
+	print _"Copyright (C) 2014 Free Software Foundation, Inc."
+	print _"License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>"
+	print _"This is free software: you are free to change and redistribute it."
+	print _"There is NO WARRANTY, to the extent permitted by law."
+
+	exit EXIT_SUCCESS
 }
 @
 

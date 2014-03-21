@@ -1,3 +1,8 @@
+2014-03-21         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* ti.twjr: General cleanup and finalizatio of the text. Bump
+	version to 0.92.
+
 2014-03-17         Arnold D. Robbins     <arnold@skeeve.com>
 
 	* ti.twjr: Fix case in chunk names.
