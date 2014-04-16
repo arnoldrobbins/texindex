@@ -1,3 +1,9 @@
+2014-04-16         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* ti.twjr: Bug fix. Multiple files had junk in second and
+	subsequent output files. Needed to clear out more data between
+	files. Bump version to 0.93.
+
 2014-03-21         Arnold D. Robbins     <arnold@skeeve.com>
 
 	* ti.twjr: General cleanup and finalizatio of the text. Bump
