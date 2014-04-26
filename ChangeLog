@@ -1,3 +1,8 @@
+2014-04-26         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* ti.twjr: Remove summaries appendix. Not needed with better
+	formatting from jrweave.  Bump version to 0.94.
+
 2014-04-16         Arnold D. Robbins     <arnold@skeeve.com>
 
 	* ti.twjr: Bug fix. Multiple files had junk in second and

@@ -22,7 +22,7 @@
 
 @c These apply across the board.
 @set UPDATE-MONTH April, 2014
-@set EDITION 0.93
+@set EDITION 0.94
 
 @set TITLE Texindex: A Program For Sorting Indices
 @set SHORTTITLE Texindex
@@ -177,7 +177,6 @@ index files produced by the @file{texinfo.tex} macro package for @TeX{}.
 * Organization::                Top level organization.
 * Processing Records::          Processing each record.
 * Necessary Stuff::             Stuff the program needs.
-* Code Chunk Summaries::        Cross references for the chunks.
 * Concept Index::               The index.
 
 @detailmenu
@@ -192,9 +191,6 @@ index files produced by the @file{texinfo.tex} macro package for @TeX{}.
 * Library Functions::           Necessary library functions.
 * Helper Functions::            Helper functions.
 * I18N::                        Internationalization.
-* File Definitions::            Source files by definition.
-* Code Chunk Definitions::      Code chunks by definition.
-* Code Chunk References::       Code chunks by reference.
 @end detailmenu
 @end menu
 
@@ -1317,34 +1313,6 @@ function version()
 	exit EXIT_SUCCESS
 }
 @
-
-@node Code Chunk Summaries
-@appendix Code Chunk Summaries
-
-This @value{APPENDIX} presents alphabetical lists of
-all the file definitions, the code chunk definitions,
-and the code chunk references.
-
-@menu
-* File Definitions::            Source files by definition.
-* Code Chunk Definitions::      Code chunks by definition.
-* Code Chunk References::       Code chunks by reference.
-@end menu
-
-@node File Definitions
-@appendixsec Source File Definitions
-
-@print_file_defs
-
-@node Code Chunk Definitions
-@appendixsec Code Chunk Definitions
-
-@print_code_defs
-
-@node Code Chunk References
-@appendixsec Code Chunk References
-
-@print_code_refs
 
 @ignore
 @node Bibliography
