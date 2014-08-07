@@ -21,8 +21,8 @@
 @c This sets the edition of the document.
 
 @c These apply across the board.
-@set UPDATE-MONTH April, 2014
-@set EDITION 0.94
+@set UPDATE-MONTH August, 2014
+@set EDITION 0.95
 
 @set TITLE Texindex: A Program For Sorting Indices
 @set SHORTTITLE Texindex
@@ -522,7 +522,7 @@ first key.
 @cindex @code{Command_char} variable
 @cindex @code{Do_initials} variable
 @cindex @code{del_array()} function
-@cindex @code{begin_file()} function
+@cindex @code{beginfile()} function
 @<@code{beginfile()} function@>=
 function beginfile(filename)
 {
