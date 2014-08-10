@@ -3,6 +3,16 @@
 	* ti.twjr: Typo fix in an index entry. Change the update month
 	and increase version to 0.95.
 
+2014-05-30         Arnold D. Robbins     <arnold@skeeve.com>
+
+	* README: New file.
+	* tests: New directory with some regression tests.
+	* jrtangle, jrweave: Copied from TexiWebJr to have standalone.
+
+	*****
+
+	* All: Pushed to https://github.com/arnoldrobbins/texindex.
+
 2014-04-26         Arnold D. Robbins     <arnold@skeeve.com>
 
 	* ti.twjr: Remove summaries appendix. Not needed with better
